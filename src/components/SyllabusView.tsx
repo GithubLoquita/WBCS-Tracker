@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { BookOpen, Search, Layers, FileText, CheckCircle, Award, ListFilter, CornerDownRight, Bookmark, CheckSquare, Square, Trash2, TrendingUp } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell, PieChart, Pie } from 'recharts';
 
 interface SyllabusViewProps {
   // Add props if needed, but it's a self-contained layout
@@ -289,6 +290,42 @@ export default function SyllabusView({}: SyllabusViewProps) {
   const percentMains = totalMains > 0 ? Math.round((masteredMains / totalMains) * 100) : 0;
   const percentOptionals = totalOptionals > 0 ? Math.round((masteredOptionals / totalOptionals) * 100) : 0;
 
+  const chartData = [
+    {
+      name: 'Prelims',
+      mastered: masteredPrelims,
+      remaining: totalPrelims - masteredPrelims,
+      total: totalPrelims,
+      percent: percentPrelims,
+    },
+    {
+      name: 'Mains',
+      mastered: masteredMains,
+      remaining: totalMains - masteredMains,
+      total: totalMains,
+      percent: percentMains,
+    },
+    {
+      name: 'Optionals',
+      mastered: masteredOptionals,
+      remaining: totalOptionals - masteredOptionals,
+      total: totalOptionals,
+      percent: percentOptionals,
+    },
+  ];
+
+  const pieData = [
+    { name: 'Prelims Mastery', value: masteredPrelims, color: '#0078d4' },
+    { name: 'Mains Mastery', value: masteredMains, color: '#d97706' },
+    { name: 'Optionals Mastery', value: masteredOptionals, color: '#4f46e5' },
+  ].filter(item => item.value > 0);
+
+  const syllabusCompositionData = [
+    { name: 'Prelims', value: totalPrelims, color: '#0078d4' },
+    { name: 'Mains', value: totalMains, color: '#d97706' },
+    { name: 'Optionals', value: totalOptionals, color: '#4f46e5' },
+  ];
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
@@ -449,6 +486,139 @@ export default function SyllabusView({}: SyllabusViewProps) {
               Start checking off topics to measure preparation velocity.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* SYLLABUS MASTER VISUAL ANALYTICS BOARD */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* BAR CHART */}
+        <div className="bg-white dark:bg-[#1e2022] p-5 rounded-md border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Preparation Progress (Bar Chart)</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Comparing mastered vs remaining topics</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Mastered
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-450">
+                <span className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-750" />
+                Remaining
+              </span>
+            </div>
+          </div>
+          
+          <div className="h-56 w-full text-xs font-sans">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
+                barSize={32}
+              >
+                <XAxis 
+                  dataKey="name" 
+                  stroke="currentColor" 
+                  className="text-slate-400" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  stroke="currentColor" 
+                  className="text-slate-400" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(16, 185, 129, 0.04)' }}
+                  contentStyle={{
+                    backgroundColor: '#1e2022',
+                    borderColor: '#334155',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                  }}
+                  itemStyle={{ color: '#ffffff' }}
+                />
+                <Bar name="Mastered" dataKey="mastered" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar name="Remaining" dataKey="remaining" stackId="a" fill="#e2e8f0" radius={[4, 4, 0, 0]} className="dark:fill-slate-800" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* PIE CHART */}
+        <div className="bg-white dark:bg-[#1e2022] p-5 rounded-md border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">
+                {grandMastered > 0 ? "Mastery Breakdown (Pie Chart)" : "Syllabus Distribution"}
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                {grandMastered > 0 ? "Proportional contribution of your mastered goals" : "Baseline count of target topics across sections"}
+              </p>
+            </div>
+            <span className="text-[10px] bg-[#0078d4]/10 text-[#0078d4] dark:bg-blue-950/40 dark:text-blue-400 px-2 py-0.5 rounded font-extrabold">
+              {grandMastered > 0 ? 'Mastery Contributions' : 'Topics Share'}
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 h-56">
+            <div className="h-full w-full sm:w-1/2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={grandMastered > 0 ? pieData : syllabusCompositionData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={75}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {(grandMastered > 0 ? pieData : syllabusCompositionData).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e2022',
+                      borderColor: '#334155',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="w-full sm:w-1/2 space-y-3">
+              {(grandMastered > 0 ? pieData : syllabusCompositionData).map((item, index) => {
+                const totalVal = grandMastered > 0 ? grandMastered : grandTotal;
+                const percentage = totalVal > 0 ? Math.round((item.value / totalVal) * 100) : 0;
+                return (
+                  <div key={index} className="flex items-center justify-between gap-4 border-b border-slate-50 dark:border-slate-900/40 pb-1.5 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{item.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-black font-mono text-slate-800 dark:text-white block">
+                        {item.value} {item.value === 1 ? 'topic' : 'topics'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {percentage}% share
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
