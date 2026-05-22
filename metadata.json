@@ -1,0 +1,6 @@
+{
+  "name": "WBCS Study Routine Tracker",
+  "description": "A Microsoft-inspired daily routine tracker, time block planner, and focus manager tailored for WBCS exam preparation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
