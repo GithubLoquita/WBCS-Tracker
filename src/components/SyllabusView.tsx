@@ -3,36 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { BookOpen, Search, Layers, FileText, CheckCircle, Award, ListFilter, CornerDownRight, Bookmark, CheckSquare, Square, Trash2, TrendingUp } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell, PieChart, Pie } from 'recharts';
 
 interface SyllabusViewProps {
-  // Add props if needed, but it's a self-contained layout
+  masteredTopics: Record<string, boolean>;
+  setMasteredTopics: Dispatch<SetStateAction<Record<string, boolean>>>;
 }
 
-export default function SyllabusView({}: SyllabusViewProps) {
+export default function SyllabusView({ masteredTopics, setMasteredTopics }: SyllabusViewProps) {
   const [activeSegment, setActiveSegment] = useState<'overview' | 'prelims' | 'mains' | 'optionals' | 'pattern'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Local state to track mastered topics
-  const [masteredTopics, setMasteredTopics] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem('wbcs_mastered_topics');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-
-  // Save changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('wbcs_mastered_topics', JSON.stringify(masteredTopics));
-    } catch (e) {
-      console.error("Error saving mastered topics", e);
-    }
-  }, [masteredTopics]);
 
   // Toggle helper
   const toggleTopicMastery = (topicId: string) => {

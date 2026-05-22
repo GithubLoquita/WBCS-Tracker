@@ -80,6 +80,25 @@ export default function App() {
     nextTask: true
   });
 
+  // Local state to track mastered topics
+  const [masteredTopics, setMasteredTopics] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('wbcs_mastered_topics');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // Save changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('wbcs_mastered_topics', JSON.stringify(masteredTopics));
+    } catch (e) {
+      console.error("Error saving mastered topics", e);
+    }
+  }, [masteredTopics]);
+
   // INITIAL STATE CRON INITIALIZATION FROM STORAGE OR PRESETS
   useEffect(() => {
     // 1. Theme Check
@@ -388,6 +407,7 @@ export default function App() {
       lastActiveDate: null,
       history: defaultHist
     });
+    setMasteredTopics({});
     setCurrentTab('dashboard');
     alert("Cache cleaned! Core system state has reset successfully.");
   };
@@ -744,7 +764,10 @@ export default function App() {
               )}
 
               {currentTab === 'syllabus' && (
-                <SyllabusView />
+                <SyllabusView 
+                  masteredTopics={masteredTopics}
+                  setMasteredTopics={setMasteredTopics}
+                />
               )}
 
             </motion.div>
