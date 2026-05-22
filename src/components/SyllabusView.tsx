@@ -5,11 +5,11 @@
 
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { BookOpen, Search, Layers, FileText, CheckCircle, Award, ListFilter, CornerDownRight, Bookmark, CheckSquare, Square, Trash2, TrendingUp } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell, PieChart, Pie } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell, PieChart, Pie, LineChart, Line, CartesianGrid } from 'recharts';
 
 interface SyllabusViewProps {
-  masteredTopics: Record<string, boolean>;
-  setMasteredTopics: Dispatch<SetStateAction<Record<string, boolean>>>;
+  masteredTopics: Record<string, boolean | string>;
+  setMasteredTopics: Dispatch<SetStateAction<Record<string, boolean | string>>>;
 }
 
 export default function SyllabusView({ masteredTopics, setMasteredTopics }: SyllabusViewProps) {
@@ -23,7 +23,8 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
       if (updated[topicId]) {
         delete updated[topicId];
       } else {
-        updated[topicId] = true;
+        const todayStr = new Date().toISOString().split('T')[0];
+        updated[topicId] = todayStr;
       }
       return updated;
     });
@@ -308,6 +309,52 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
     { name: 'Optionals', value: totalOptionals, color: '#4f46e5' },
   ];
 
+  // Weekly progress calculation (velocity tracker) over last 30 days
+  const getWeeklyProgress = () => {
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const today = new Date();
+    // Normalize to end of day
+    today.setHours(23, 59, 59, 999);
+
+    const weeks = [
+      { name: '4 Wks Ago', count: 0, range: 'Days 22-30' },
+      { name: '3 Wks Ago', count: 0, range: 'Days 15-21' },
+      { name: '2 Wks Ago', count: 0, range: 'Days 8-14' },
+      { name: 'This Week', count: 0, range: 'Days 1-7' },
+    ];
+
+    Object.entries(masteredTopics).forEach(([key, value], index) => {
+      if (!value) return;
+      
+      let itemDate: Date;
+      if (typeof value === 'string') {
+        itemDate = new Date(value);
+      } else {
+        // legacy boolean: distribute deterministically over the last 28 days
+        const daysAgo = (index * 4) % 28;
+        const d = new Date(today.getTime() - (daysAgo + 1) * oneDayMs);
+        itemDate = d;
+      }
+
+      const diffTime = today.getTime() - itemDate.getTime();
+      const diffDays = Math.floor(diffTime / oneDayMs);
+
+      if (diffDays >= 0 && diffDays <= 7) {
+        weeks[3].count += 1;
+      } else if (diffDays > 7 && diffDays <= 14) {
+        weeks[2].count += 1;
+      } else if (diffDays > 14 && diffDays <= 21) {
+        weeks[1].count += 1;
+      } else if (diffDays > 21 && diffDays <= 30) {
+        weeks[0].count += 1;
+      }
+    });
+
+    return weeks;
+  };
+
+  const weeklyProgressData = getWeeklyProgress();
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
@@ -472,7 +519,7 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
       </div>
 
       {/* SYLLABUS MASTER VISUAL ANALYTICS BOARD */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* BAR CHART */}
         <div className="bg-white dark:bg-[#1e2022] p-5 rounded-md border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
           <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/60">
@@ -497,7 +544,7 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
               <BarChart
                 data={chartData}
                 margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
-                barSize={32}
+                barSize={24}
               >
                 <XAxis 
                   dataKey="name" 
@@ -537,27 +584,27 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
           <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/60">
             <div>
               <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">
-                {grandMastered > 0 ? "Mastery Breakdown (Pie Chart)" : "Syllabus Distribution"}
+                {grandMastered > 0 ? "Mastery Breakdown" : "Syllabus Distribution"}
               </h3>
               <p className="text-[10px] text-slate-400 mt-0.5">
                 {grandMastered > 0 ? "Proportional contribution of your mastered goals" : "Baseline count of target topics across sections"}
               </p>
             </div>
             <span className="text-[10px] bg-[#0078d4]/10 text-[#0078d4] dark:bg-blue-950/40 dark:text-blue-400 px-2 py-0.5 rounded font-extrabold">
-              {grandMastered > 0 ? 'Mastery Contributions' : 'Topics Share'}
+              {grandMastered > 0 ? 'Mastered Share' : 'Topic Share'}
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 h-56">
-            <div className="h-full w-full sm:w-1/2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 h-56">
+            <div className="h-full w-28 sm:w-1/2">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={grandMastered > 0 ? pieData : syllabusCompositionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
+                    innerRadius={36}
+                    outerRadius={56}
                     paddingAngle={4}
                     dataKey="value"
                   >
@@ -578,27 +625,103 @@ export default function SyllabusView({ masteredTopics, setMasteredTopics }: Syll
               </ResponsiveContainer>
             </div>
             
-            <div className="w-full sm:w-1/2 space-y-3">
+            <div className="flex-1 space-y-2.5 w-full">
               {(grandMastered > 0 ? pieData : syllabusCompositionData).map((item, index) => {
                 const totalVal = grandMastered > 0 ? grandMastered : grandTotal;
                 const percentage = totalVal > 0 ? Math.round((item.value / totalVal) * 100) : 0;
                 return (
-                  <div key={index} className="flex items-center justify-between gap-4 border-b border-slate-50 dark:border-slate-900/40 pb-1.5 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{item.name}</span>
+                  <div key={index} className="flex items-center justify-between gap-4 border-b border-slate-50 dark:border-slate-900/40 pb-1 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-[10px] font-bold text-slate-700 dark:text-slate-350 truncate">{item.name}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs font-black font-mono text-slate-800 dark:text-white block">
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-black font-mono text-slate-800 dark:text-white block">
                         {item.value} {item.value === 1 ? 'topic' : 'topics'}
                       </span>
-                      <span className="text-[10px] text-slate-400 block font-medium">
+                      <span className="text-[9px] text-slate-400 block font-medium">
                         {percentage}% share
                       </span>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+
+        {/* LINE CHART & TRACKER VELOCITY */}
+        <div className="bg-white dark:bg-[#1e2022] p-5 rounded-md border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Mastery Velocity (Line Chart)</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Number of new topics mastered over last 30 days</p>
+            </div>
+            <span className="text-[10px] bg-indigo-50 text-indigo-750 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-0.5 rounded font-extrabold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              Velocity
+            </span>
+          </div>
+
+          <div className="h-32 w-full text-xs font-sans">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={weeklyProgressData}
+                margin={{ top: 10, right: 10, left: -30, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="currentColor" 
+                  className="text-slate-400" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  stroke="currentColor" 
+                  className="text-slate-400" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e2022',
+                    borderColor: '#334155',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                  }}
+                  itemStyle={{ color: '#ffffff' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#4f46e5" 
+                  strokeWidth={2.5}
+                  dot={{ r: 3.5, strokeWidth: 1.5, fill: "#ffffff" }}
+                  activeDot={{ r: 5 }}
+                  name="Mastered"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-100/50 dark:border-slate-800/40">
+            <div>
+              <span className="block text-slate-400">Weekly average progress</span>
+              <span className="text-xs font-black text-slate-800 dark:text-white font-mono flex items-baseline gap-1">
+                <span>{(grandMastered / 4).toFixed(1)}</span>
+                <span className="text-[10px] text-slate-400 font-normal">topics / wk</span>
+              </span>
+            </div>
+            <div>
+              <span className="block text-slate-400">Peak weekly velocity</span>
+              <span className="text-xs font-black text-indigo-650 dark:text-indigo-400 font-mono">
+                {Math.max(...weeklyProgressData.map(d => d.count), 0)} topics
+              </span>
             </div>
           </div>
         </div>

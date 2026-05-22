@@ -23,7 +23,14 @@ import {
   Power,
   ChevronRight,
   ClipboardList,
-  Bookmark
+  Bookmark,
+  Menu,
+  X,
+  Smartphone,
+  Tablet,
+  Laptop,
+  RotateCw,
+  Accessibility
 } from 'lucide-react';
 import { 
   StudyBlock, 
@@ -72,6 +79,13 @@ export default function App() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>('');
   const [activeFocusBlock, setActiveFocusBlock] = useState<StudyBlock | null>(null);
 
+  // Mobile, Tablet, and Accessibility Platform (MTAP) States
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [simulatedDevice, setSimulatedDevice] = useState<'none' | 'smartphone' | 'tablet'>('none');
+  const [simulatedOrientation, setSimulatedOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [accessibilityScale, setAccessibilityScale] = useState<number>(1.0);
+  const [touchOptimized, setTouchOptimized] = useState<boolean>(true);
+
   // Settings for alert triggers
   const [alertSettings, setAlertSettings] = useState({
     bedtime: true,
@@ -81,7 +95,7 @@ export default function App() {
   });
 
   // Local state to track mastered topics
-  const [masteredTopics, setMasteredTopics] = useState<Record<string, boolean>>(() => {
+  const [masteredTopics, setMasteredTopics] = useState<Record<string, boolean | string>>(() => {
     try {
       const saved = localStorage.getItem('wbcs_mastered_topics');
       return saved ? JSON.parse(saved) : {};
